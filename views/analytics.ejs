@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аналітика - Автошкола</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('partials/navbar') %>
+    
+    <div class="container mt-4">
+        <h2><i class="fas fa-chart-bar"></i> Аналітика та звіти</h2>
+        <p class="lead">MongoDB Aggregation Pipeline демонстрації</p>
+
+        <!-- 1. Підрахунок документів за умовами -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-users"></i> 1. Підрахунок студентів за статусом</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary" onclick="loadStudentsByStatus()">
+                            <i class="fas fa-play"></i> Виконати запит
+                        </button>
+                        <div id="studentsByStatus" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-money-bill-wave"></i> 2. Середнє значення платежів</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-success" onclick="loadAveragePayment()">
+                            <i class="fas fa-play"></i> Виконати запит
+                        </button>
+                        <div id="averagePayment" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Найменші/найбільші значення -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-line"></i> 3. Екстремальні значення платежів</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-warning" onclick="loadPaymentExtremes()">
+                            <i class="fas fa-play"></i> Виконати запит
+                        </button>
+                        <div id="paymentExtremes" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-credit-card"></i> 4. Підсумки за методами оплати</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-info" onclick="loadPaymentsByMethod()">
+                            <i class="fas fa-play"></i> Виконати запит
+                        </button>
+                        <div id="paymentsByMethod" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Комбінований пайплайн -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-cogs"></i> Комбінований пайплайн</h5>
+                        <small class="text-muted">Фільтрація → Join → Групування → Сортування → Обмеження</small>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-dark" onclick="loadComplexPipeline()">
+                            <i class="fas fa-play"></i> Виконати складний запит
+                        </button>
+                        <div id="complexPipeline" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- JOIN запити -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-link"></i> JOIN: Студенти з платежами</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-secondary" onclick="loadStudentsWithPayments()">
+                            <i class="fas fa-play"></i> Виконати JOIN
+                        </button>
+                        <div id="studentsWithPayments" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-link"></i> JOIN: Інструктори з заняттями</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-secondary" onclick="loadInstructorsWithLessons()">
+                            <i class="fas fa-play"></i> Виконати JOIN
+                        </button>
+                        <div id="instructorsWithLessons" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Платежі по місяцях -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-calendar"></i> Аналітика платежів по місяцях</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-outline-primary" onclick="loadPaymentsByMonth()">
+                            <i class="fas fa-play"></i> Завантажити дані
+                        </button>
+                        <div id="paymentsByMonth" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_URL = 'http://localhost:3000';
+
+        // 1. Підрахунок студентів за статусом
+        async function loadStudentsByStatus() {
+            try {
+                const response = await fetch(`${API_URL}/api/analytics/students-by-status`);
+                const data = await response.json();
+                
+                let html = '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Статус</th><th>Кількість</th></tr></thead><tbody>';
+                
+                data.forEach(item => {
+                    const statusName = item._id === 'active' ? 'Активні' : 
+                                      item._id === 'completed' ? 'Завершені' : 'Призупинені';
+                    html += `<tr><td>${statusName}</td><td><span class="badge bg-primary">${item.count}</span></td></tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                document.getElementById('studentsByStatus').innerHTML = html;
+            } catch (error) {
+                document.getElementById('studentsByStatus').innerHTML = 
+                    `<div class="alert alert-danger">Помилка: ${error.message}</div>`;
+            }
+        }
+
+        // 2. Середнє значення платежів
+        async function loadAveragePayment() {
+            try {
+                const response = await fetch(`${API_URL}/api/analytics/average-payment`);
+                const data = await response.json();
+                
+                const html = `
+                    <div class="row">
+                        <div class="col-4 text-center">
+                            <h5 class="text-primary">${data.averageAmount?.toFixed(2) || 0} ₴</h5>
+                            <small>Середній платіж</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <h5 class="text-success">${data.totalAmount?.toFixed(2) || 0} ₴</h5>
+                            <small>Загальна сума</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <h5 class="text-info">${data.count || 0}</h5>
+                            <small>Кількість платежів</small>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('averagePayment').innerHTML = html;
+            } catch (error) {
+                document.getElementById('averagePayment').innerHTML = 
+                    `<div class="alert alert-danger">Помилка: ${error.message}</div>`;
+            }
+        }
+
+        // 3. Екстремальні значення
+        async function loadPaymentExtremes() {
+            try {
+                const response = await fetch(`${API_URL}/api/analytics/payment-extremes`);
+                const data = await response.json();
+                
+                const html = `
+                    <div class="row">
+                        <div class="col-6 text-center">
+                            <h5 class="text-danger">${data.minPayment?.toFixed(2) || 0} ₴</h5>
+                            <small>Мінімальний платіж</small>
+                        </div>
+                        <div class="col-6 text-center">
+                            <h5 class="text-success">${data.maxPayment?.toFixed(2) || 0} ₴</h5>
+                            <small>Максимальний платіж</small>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('paymentExtremes').innerHTML = html;
+            } catch (error) {
+                document.getElementById('paymentExtremes').innerHTML = 
+                    `<div class="alert alert-danger">Помилка: ${error.message}</div>`;
+            }
+        }
+
+        // 4. Платежі за методами оплати
+        async function loadPaymentsByMethod() {
+            try {
+                const response = await fetch(`${API_URL}/api/analytics/payments-by-method`);
+                const data = await response.json();
+                
+                let html = '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Метод оплати</th><th>Сума</th><th>Кількість</th><th>Середнє</th></tr></thead><tbody>';
+                
+                data.forEach(item => {
+                    html += `<tr>
+                        <td>${item._id || 'Не вказано'}</td>
+                        <td><span class="badge bg-success">${item.totalAmount.toFixed(2)} ₴</span></td>
+                        <td><span class="badge bg-info">${item.count}</span></td>
+                        <td>${item.averageAmount.toFixed(2)} ₴</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                document.getElementById('paymentsByMethod').innerHTML = html;
+            } catch (error) {
+                document.getElementById('paymentsByMethod').innerHTML = 
+                    `<div class="alert alert-danger">Помилка: ${error.message}</div>`;
+            }
+        }
+
+        // Комбінований пайплайн
+        async function loadComplexPipeline() {
+            try {
+                const response = await fetch(`${API_URL}/api/analytics/complex-pipeline`);
+                const data = await response.json();
+                
+                let html = '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Категорія</th><th>Студентів</th><th>Платежів</th><th>Занять</th><th>Сер. платежів</th></tr></thead><tbody>';
+                
+                data.forEach(item => {
+                    html += `<tr>
+                        <td><span class="badge bg-primary">${item._id}</span></td>
+                        <td>${item.studentCount}</td>
+                        <td>${item.totalPayments}</td>
+                        <td>${item.totalLessons}</td>
+                        <td>${item.avgPayments.toFixed(1)}</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                document.getElementById('complexPipeline').innerHTML = html;
+            } catch (error) {
+                document.getElementById('complexPipeline').innerHTML = 
+                    `<div class="alert alert-danger">Помилка: ${error.message}</div>`;
+            }
+        }
+
+        // JOIN: Студенти з платежами
+        async function loadStudentsWithPayments() {
+            try {
+                const response = await fetch(`${API_URL}/api/analytics/students-with-payments`);
+                const data = await response.json();
+                
+                let html = '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Студент</th><th>Загальна сума</th><th>Кількість платежів</th></tr></thead><tbody>';
+                
+                data.slice(0, 10).forEach(student => {
+                    html += `<tr>
+                        <td>${student.firstName} ${student.lastName}</td>
+                        <td><span class="badge bg-success">${(student.totalPayments || 0).toFixed(2)} ₴</span></td>
+                        <td><span class="badge bg-info">${student.paymentCount || 0}</span></td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                document.getElementById('studentsWithPayments').innerHTML = html;
+            } catch (error) {
+                document.getElementById('studentsWithPayments').innerHTML = 
+                    `<div class="alert alert-danger">Помилка: ${error.message}</div>`;
+            }
+        }
+
+        // JOIN: Інструктори з заняттями
+        async function loadInstructorsWithLessons() {
+            try {
+                const response = await fetch(`${API_URL}/api/analytics/instructors-with-lessons`);
+                const data = await response.json();
+                
+                let html = '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Інструктор</th><th>Занять</th><th>Унікальних студентів</th></tr></thead><tbody>';
+                
+                data.slice(0, 10).forEach(instructor => {
+                    html += `<tr>
+                        <td>${instructor.firstName} ${instructor.lastName}</td>
+                        <td><span class="badge bg-primary">${instructor.lessonCount || 0}</span></td>
+                        <td><span class="badge bg-success">${instructor.uniqueStudents || 0}</span></td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                document.getElementById('instructorsWithLessons').innerHTML = html;
+            } catch (error) {
+                document.getElementById('instructorsWithLessons').innerHTML = 
+                    `<div class="alert alert-danger">Помилка: ${error.message}</div>`;
+            }
+        }
+
+        // Платежі по місяцях
+        async function loadPaymentsByMonth() {
+            try {
+                const response = await fetch(`${API_URL}/api/analytics/payments-by-month`);
+                const data = await response.json();
+                
+                let html = '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Місяць</th><th>Сума</th><th>Кількість</th><th>Середнє</th></tr></thead><tbody>';
+                
+                data.forEach(item => {
+                    const monthNames = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
+                    const monthName = monthNames[item._id.month - 1];
+                    
+                    html += `<tr>
+                        <td>${monthName} ${item._id.year}</td>
+                        <td><span class="badge bg-success">${item.totalAmount.toFixed(2)} ₴</span></td>
+                        <td><span class="badge bg-info">${item.count}</span></td>
+                        <td>${item.avgAmount.toFixed(2)} ₴</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                document.getElementById('paymentsByMonth').innerHTML = html;
+            } catch (error) {
+                document.getElementById('paymentsByMonth').innerHTML = 
+                    `<div class="alert alert-danger">Помилка: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

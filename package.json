@@ -5,16 +5,24 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "seed": "node seedDatabase.js",
+    "web": "node webserver.js",
+    "web-dev": "nodemon webserver.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@faker-js/faker": "^9.8.0",
+    "axios": "^1.9.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
+    "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "faker": "^5.5.3",
+    "faker-js": "^1.0.0",
     "mongoose": "^8.15.1"
   },
   "devDependencies": {
